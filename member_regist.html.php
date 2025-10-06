@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,36 +8,28 @@
     <!-- CSSファイルを読み込む -->
     <link rel="stylesheet" href="member_regist.css">
 </head>
+
 <body>
     <div class="container">
         <h1 class="header-title"><?= $title ?></h1>
-        
-        <?php if (!empty($errors)): ?>
-            <!-- エラー表示エリア -->
-            <div class="error-box">
-                <p>入力エラーがあります</p>
-                <ul>
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= htmlspecialchars($error) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
 
-        <?php if ($stage === 1): // -------------------- フォーム入力画面 -------------------- ?>
-            
+        <?php if ($stage === 1): // -------------------- フォーム入力画面 -------------------- 
+        ?>
+
             <form action="member_regist.php" method="POST">
                 <input type="hidden" name="action" value="confirm">
 
                 <!-- 氏名 -->
-                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="name">
+                <div class="form-group name-group">
+                    <div class="name-field">
                         <label for="last_name" class="form-label">氏名（姓）</label>
-                        <input type="text" id="last_name" name="last_name" value="<?= htmlspecialchars($formData['last_name']) ?>" class="form-input" required>
+                        <input type="text" id="last_name" name="last_name" value="<?= htmlspecialchars($formData['last_name']) ?>" class="form-input <?= isset($errors['last_name']) ? 'is-error' : '' ?>" maxlength="20" required>
+                        <?php if (isset($errors['last_name'])): ?><p class="error-message"><?= htmlspecialchars($errors['last_name']) ?></p><?php endif; ?>
                     </div>
-                    <div class="name">
+                    <div class="name-field">
                         <label for="first_name" class="form-label">氏名（名）</label>
-                        <input type="text" id="first_name" name="first_name" value="<?= htmlspecialchars($formData['first_name']) ?>" class="form-input" required>
+                        <input type="text" id="first_name" name="first_name" value="<?= htmlspecialchars($formData['first_name']) ?>" class="form-input <?= isset($errors['first_name']) ? 'is-error' : '' ?>" maxlength="20" required>
+                        <?php if (isset($errors['first_name'])): ?><p class="error-message"><?= htmlspecialchars($errors['first_name']) ?></p><?php endif; ?>
                     </div>
                 </div>
 
@@ -53,45 +46,52 @@
                             <span>女性</span>
                         </label>
                     </div>
+                    <?php if (isset($errors['gender'])): ?><p class="error-message"><?= htmlspecialchars($errors['gender']) ?></p><?php endif; ?>
                 </div>
 
                 <!-- 住所 -->
                 <div class="form-group">
                     <div class="prefectures">
                         <label for="prefecture" class="form-label">住所（都道府県）</label>
-                        <select id="prefecture" name="prefecture" class="form-input form-select" required>
+                        <select id="prefecture" name="prefecture" class="form-input form-select <?= isset($errors['prefecture']) ? 'is-error' : '' ?>" required>
                             <option value="">-- 選択してください --</option>
-                            <?php foreach ($prefectures as $p): ?>
+                            <?php
+                            foreach (PREFECTURES as $p): ?>
                                 <option value="<?= htmlspecialchars($p) ?>" <?= ($formData['prefecture'] === $p) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($p) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <?php if (isset($errors['prefecture'])): ?><p class="error-message"><?= htmlspecialchars($errors['prefecture']) ?></p><?php endif; ?>
                     </div>
-                    <br>
+
                     <div class="after_address">
                         <label for="address" class="form-label">住所（それ以降の住所）</label>
-                        <input type="text" id="address" name="address" value="<?= htmlspecialchars($formData['address']) ?>" class="form-input" required>
+                        <input type="text" id="address" name="address" value="<?= htmlspecialchars($formData['address']) ?>" class="form-input <?= isset($errors['address']) ? 'is-error' : '' ?>" maxlength="100">
+                        <?php if (isset($errors['address'])): ?><p class="error-message"><?= htmlspecialchars($errors['address']) ?></p><?php endif; ?>
                     </div>
                 </div>
+
                 <!-- パスワード -->
                 <div class="form-group">
-                    <div class="pass">
+                    <div class="pass-field">
                         <label for="password" class="form-label">パスワード</label>
-                        <!-- type="password" により、入力文字は非表示 -->
-                        <input type="password" id="password" name="password" value="<?= htmlspecialchars($formData['password']) ?>" class="form-input" required>
+                        <input type="password" id="password" name="password" value="" class="form-input <?= isset($errors['password']) ? 'is-error' : '' ?>" minlength="8" maxlength="20" required>
+                        <?php if (isset($errors['password'])): ?><p class="error-message"><?= htmlspecialchars($errors['password']) ?></p><?php endif; ?>
                     </div>
                     <br>
-                    <div class="pass">
+                    <div class="pass-field">
                         <label for="password_confirm" class="form-label">パスワード確認</label>
-                        <input type="password" id="password_confirm" name="password_confirm" value="<?= htmlspecialchars($formData['password_confirm']) ?>" class="form-input" placeholder="確認のため再入力" required>
+                        <input type="password" id="password_confirm" name="password_confirm" value="" class="form-input <?= isset($errors['password_confirm']) ? 'is-error' : '' ?>" placeholder="確認のため再入力" minlength="8" maxlength="20" required>
+                        <?php if (isset($errors['password_confirm'])): ?><p class="error-message"><?= htmlspecialchars($errors['password_confirm']) ?></p><?php endif; ?>
                     </div>
                 </div>
 
                 <!-- メールアドレス -->
                 <div class="form-group mail_address">
                     <label for="email" class="form-label">メールアドレス</label>
-                    <input type="email" id="email" name="email" value="<?= htmlspecialchars($formData['email']) ?>" class="form-input" required>
+                    <input type="email" id="email" name="email" value="<?= htmlspecialchars($formData['email']) ?>" class="form-input <?= isset($errors['email']) ? 'is-error' : '' ?>" maxlength="200" required>
+                    <?php if (isset($errors['email'])): ?><p class="error-message"><?= htmlspecialchars($errors['email']) ?></p><?php endif; ?>
                 </div>
 
                 <div class="form-group confirmation_button">
@@ -101,8 +101,9 @@
                 </div>
             </form>
 
-        <?php elseif ($stage === 2): // -------------------- 確認画面 -------------------- ?>
-            
+        <?php elseif ($stage === 2): // -------------------- 確認画面 -------------------- 
+        ?>
+
             <?php
             // 確認画面表示用のデータリスト
             $displayFields = [
@@ -114,7 +115,7 @@
                 'メールアドレス' => htmlspecialchars($formData['email']),
             ];
             ?>
-            
+
             <dl class="confirm-list">
                 <?php foreach ($displayFields as $label => $value): ?>
                     <div class="confirm-item">
@@ -124,26 +125,32 @@
                 <?php endforeach; ?>
             </dl>
 
-            <div class="button-container">
-                <!-- 登録完了ボタン (前に移動) -->
-                <form action="member_regist.php" method="POST">
-                    <input type="hidden" name="action" value="register">
-                    <button type="submit" class="btn btn-success">
-                        登録完了
-                    </button>
-                </form>
+            <div class="button-container button-group">
+                <!-- 登録完了ボタン -->
+                <div class="verification_screen_button">
+                    <form action="member_regist.php" method="POST" style="flex: 1;">
+                        <input type="hidden" name="action" value="register">
+                        <button type="submit" class="btn btn-success">
+                            登録完了
+                        </button>
+                    </form>
+                </div>
+                <!-- 戻るボタン -->
+                <div class="verification_screen_button">
+                    <form action="member_regist.php" method="POST" style="flex: 1;">
+                        <input type="hidden" name="action" value="back">
+                        <button type="submit" class="btn btn-secondary">
+                            前に戻る
+                        </button>
+                    </form>
+                </div>
+
+               
+
             </div>
-            <div class="button-container">
-                <!-- 戻るボタン (後に移動) -->
-                <form action="member_regist.php" method="POST">
-                    <input type="hidden" name="action" value="back">
-                    <button type="submit" class="btn btn-secondary">
-                        前に戻る
-                    </button>
-                </form>
-            </div>
-            
-        <?php elseif ($stage === 3): // -------------------- 完了画面 -------------------- ?>
+
+        <?php elseif ($stage === 3): // -------------------- 完了画面 -------------------- 
+        ?>
 
             <div class="complete-screen">
                 <!-- SVG Checkmark Icon -->
@@ -155,4 +162,5 @@
         <?php endif; ?>
     </div>
 </body>
+
 </html>
