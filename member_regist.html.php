@@ -102,6 +102,10 @@
                         確認画面へ
                     </button>
                 </div>
+                <br>
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <a href="logout.php" class="btn btn-secondary">トップに戻る</a>
+                </div>
             </form>
 
         <?php elseif ($stage === 2): // -------------------- 確認画面 -------------------- 
@@ -149,7 +153,6 @@
                         </button>
                     </form>
                 </div>
-
             </div>
 
         <?php elseif ($stage === 3): // -------------------- 完了画面 -------------------- 
@@ -160,13 +163,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <h2>会員登録が完了しました</h2>
-                <!-- <div class="button-container">
-                    <form action="member_regist.php" method="GET">
-                        <button type="submit" class="btn btn-primary">
-                            続けて登録する
-                        </button>
-                    </form>
-                </div> -->
+                <br>
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <a href="logout.php" class="btn btn-secondary">トップに戻る</a>
+                </div>
             </div>
         <?php endif; ?>
     </div>
