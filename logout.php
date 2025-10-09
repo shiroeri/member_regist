@@ -1,5 +1,5 @@
 <?php
-// index.php (トップ画面)
+// logout.php (トップ画面)
 
 // 1. セッションを開始
 session_start();
@@ -30,30 +30,36 @@ if ($is_logged_in) {
         .header-nav { text-align: right; padding: 10px; border-bottom: 1px solid #ccc; }
         .header-nav a { margin-left: 15px; text-decoration: none; color: blue; }
         .welcome-msg { text-align: left; margin-right: 15px; font-weight: bold; }
+        .nav-content { display: flex; justify-content: flex-end; align-items: center; }
     </style>
 </head>
 
 <body>
     <header>
         <div class="header-nav">
+            <div>
             <?php if ($is_logged_in): ?>
                 <div class="welcome-msg">
                     <span>ようこそ <?= $user_name ?></span>
                 </div>
                 
-                <a href="for.logout.php">ログアウト</a>
-                
-                <?php else: ?>
-                <a href="member_regist.php">新規会員登録</a>
-                <a href="login.php">ログイン</a>
+                <div class="nav-content">
+                    <a href="thread_regist.php">新規スレッド作成</a>
+                    <a href="for.logout.php">ログアウト</a>
+                </div>
+             
+            <?php else: ?>
+                <div class="nav-content">
+                    <a href="member_regist.php">新規会員登録</a>
+                    <a href="login.php">ログイン</a>
+                </div>
             <?php endif; ?>
+            </div>
         </div>
     </header>
 
     <main style="text-align: center; margin-top: 50px;">
         <h1>〇〇掲示板</h1>
-        
-    </main>
+        </main>
 </body>
-
 </html>

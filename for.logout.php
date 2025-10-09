@@ -1,5 +1,5 @@
 <?php
-// logout.php
+// for.logout.php
 
 // 1. セッションを開始
 session_start();
