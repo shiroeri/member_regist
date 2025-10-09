@@ -41,7 +41,7 @@ function getPdoConnection(): \PDO
     } catch (\PDOException $e) {
         // 接続失敗時の処理
         error_log("DB Connection failed: " . $e->getMessage());
-        die("システムエラーが発生しました。データベースの接続設定を確認してください。");
+        throw $e;
     }
 }
 

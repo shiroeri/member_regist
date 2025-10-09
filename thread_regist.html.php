@@ -109,6 +109,10 @@
                     </div>
                     <br>
                     <div>
+                        <a href="thread.php" class="btn btn-secondary" style="text-decoration: none; margin-left: 10px;">一覧に戻る</a>
+                    </div>
+                    <br>
+                    <div>
                         <a href="logout.php" class="btn btn-secondary" style="text-decoration: none; margin-left: 10px;">トップに戻る</a>
                     </div>
                     

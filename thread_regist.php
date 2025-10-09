@@ -99,8 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // 登録成功後、セッションのトークンをクリア
                     unset($_SESSION['thread_token']);
 
-                    // ⭐ 登録完了後、トップ画面へリダイレクト
-                    header('Location: logout.php');
+                    // ⭐ 登録完了後、スレッド一覧へリダイレクト
+                    header('Location: thread.php');
 
                     // スレッド作成確認画面へ遷移
                     $mode = 'complete';
