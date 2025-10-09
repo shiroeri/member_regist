@@ -44,12 +44,14 @@ if ($is_logged_in) {
                 </div>
                 
                 <div class="nav-content">
+                    <a href="thread.php" style="margin-left: 15px;">スレッド一覧</a>
                     <a href="thread_regist.php">新規スレッド作成</a>
                     <a href="for.logout.php">ログアウト</a>
                 </div>
              
             <?php else: ?>
                 <div class="nav-content">
+                    <a href="thread.php" style="margin-left: 15px;">スレッド一覧</a>
                     <a href="member_regist.php">新規会員登録</a>
                     <a href="login.php">ログイン</a>
                 </div>
