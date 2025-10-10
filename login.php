@@ -71,7 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = getPdoConnection(); // DB接続
             
             // 該当メールアドレスのユーザー情報を取得
-            $sql = "SELECT id, password, name_sei, name_mei FROM members WHERE email = :email";
+            $sql = "SELECT id, password, name_sei, name_mei 
+                    FROM members 
+                    WHERE email = :email 
+                    AND deleted_at IS NULL";
             $stmt = $pdo->prepare($sql);
             $stmt->bindValue(':email', $input_email, PDO::PARAM_STR);
             $stmt->execute();

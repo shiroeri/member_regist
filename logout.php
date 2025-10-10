@@ -60,8 +60,17 @@ if ($is_logged_in) {
         </div>
     </header>
 
-    <main style="text-align: center; margin-top: 50px;">
+    <main style="text-align: center; padding: 100px 0; background-color: #DDFFFF;">
         <h1>〇〇掲示板</h1>
-        </main>
+    </main>
+    <footer style="height: 50px; background-color: #FFFFDD;">
+        <?php if ($is_logged_in): ?>
+            <div style="text-align: right; margin-bottom: 30px; padding: 10px;">
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <a href="member_withdrawal.php" class="btn btn-danger">退会</a> 
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </footer>
 </body>
 </html>
