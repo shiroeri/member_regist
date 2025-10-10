@@ -59,7 +59,7 @@
                         </a>
                     </div>
                     <div class="thread-meta">
-                        投稿者ID: <?= htmlspecialchars($thread['member_id']) ?> | 登録日時: <?= htmlspecialchars($thread['created_at']) ?>
+                        スレッドID: <?= htmlspecialchars($thread['id']) ?> | 登録日時: <?= htmlspecialchars($thread['created_at']) ?>
                     </div>
                 </div>
             <?php endforeach; ?>
