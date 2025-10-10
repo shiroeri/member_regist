@@ -118,6 +118,43 @@ try {
             } // end else for login check
         } // end if POST request
 
+        // --- 4.1. いいね/いいね解除処理 (GET) ---
+        if (isset($_GET['action']) && isset($_GET['comment_id']) && ctype_digit($_GET['comment_id'])) {
+    
+            $comment_id_to_like = (int)$_GET['comment_id'];
+    
+            // ログイン状態の確認（仕様より必須）
+            if (!$is_logged_in) {
+                // ログアウト状態の場合、会員登録フォームへ遷移させる
+                header('Location: member_regist.php');
+                exit;
+            }
+
+            $member_id = $_SESSION['user_id']; 
+
+            if ($_GET['action'] === 'like') {
+                // いいね登録
+                // INSERT IGNORE を使うことで、ユニークキー違反（二重いいね）が発生してもエラーを無視し、処理を続行できます。
+                $sql_like = "INSERT IGNORE INTO likes (member_id, comment_id) VALUES (:member_id, :comment_id)";
+                $stmt_like = $pdo->prepare($sql_like);
+                $stmt_like->bindValue(':member_id', $member_id, PDO::PARAM_INT);
+                $stmt_like->bindValue(':comment_id', $comment_id_to_like, PDO::PARAM_INT);
+                $stmt_like->execute();
+        
+            } elseif ($_GET['action'] === 'unlike') {
+                // いいね解除 (レコードを完全に削除する)
+                $sql_unlike = "DELETE FROM likes WHERE member_id = :member_id AND comment_id = :comment_id";
+                $stmt_unlike = $pdo->prepare($sql_unlike);
+                $stmt_unlike->bindValue(':member_id', $member_id, PDO::PARAM_INT);
+                $stmt_unlike->bindValue(':comment_id', $comment_id_to_like, PDO::PARAM_INT);
+                $stmt_unlike->execute();
+            }
+
+            // 処理成功後、ページをリロード（いいね機能の仕様）
+            header('Location: thread_detail.php?id=' . $thread_id . '&page=' . $current_page);
+            exit;
+        }
+
         
         // --- 3.1 & 3.2. コメント一覧の取得 ---
         // $threadが存在する場合のみ実行される
@@ -139,16 +176,30 @@ try {
         $offset = ($current_page - 1) * COMMENTS_PER_PAGE; // 💡 offsetはここで再計算
         
         // 3.2. コメント一覧の取得
-        $sql_comments = "SELECT c.id, c.comment, c.created_at, m.name_sei, m.name_mei
-                         FROM comments AS c
-                         LEFT JOIN members AS m ON c.member_id = m.id
-                         WHERE c.thread_id = :thread_id AND c.deleted_at IS NULL
-                         ORDER BY c.created_at ASC
-                         LIMIT :limit OFFSET :offset";
-        
+        $sql_comments = "SELECT 
+        c.id, 
+        c.comment, 
+        c.created_at, 
+        m.name_sei, 
+        m.name_mei,
+        -- 💡 いいね総数を取得 (サブクエリ1)
+        (SELECT COUNT(*) FROM likes WHERE comment_id = c.id) AS like_count,
+        -- 💡 ログインユーザーがいいね済みかを取得 (サブクエリ2)
+        (SELECT COUNT(*) FROM likes WHERE comment_id = c.id AND member_id = :current_member_id) AS is_liked 
+        FROM comments AS c
+        LEFT JOIN members AS m ON c.member_id = m.id
+        WHERE c.thread_id = :thread_id AND c.deleted_at IS NULL
+        ORDER BY c.created_at ASC
+        LIMIT :limit OFFSET :offset";
+
         $stmt_comments = $pdo->prepare($sql_comments);
+
+        // 現在のユーザーIDを変数に格納 (ログインしていない場合は0などの存在しないID)
+        $current_member_id = $_SESSION['user_id'] ?? 0;
+
+        $stmt_comments->bindValue(':current_member_id', $current_member_id, PDO::PARAM_INT); // 💡 新しいバインド
         $stmt_comments->bindParam(':thread_id', $thread_id, PDO::PARAM_INT);
-        // LIMIT/OFFSETに直接bindParamする場合、PDO::PARAM_INTを明示的に使用
+        // ... (LIMITとOFFSETのバインドは省略)
         $stmt_comments->bindValue(':limit', COMMENTS_PER_PAGE, PDO::PARAM_INT);
         $stmt_comments->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt_comments->execute();

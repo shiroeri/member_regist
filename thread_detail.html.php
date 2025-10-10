@@ -86,9 +86,48 @@
                 <?php foreach ($comments as $comment): ?>
                     <div class="comment-item">
                         <div class="thread-meta">
-                            <?= htmlspecialchars($comment['id']) ?>. <?= htmlspecialchars($comment['member_name'] ?? '退会ユーザー') ?> <?= htmlspecialchars($comment['formatted_created_at']) ?>
+                            <?= htmlspecialchars($comment['id']) ?>. 
+                            <?= htmlspecialchars($comment['member_name'] ?? '退会ユーザー') ?> 
+                            <?= htmlspecialchars($comment['formatted_created_at']) ?>
                         </div>
+        
                         <p style="margin-bottom: 5px;"><?= nl2br(htmlspecialchars($comment['comment'])) ?></p>
+
+                        <div style="margin-top: 5px; text-align: right;">
+                            <?php 
+                                // リンク先URLを構築
+                                $base_url = 'thread_detail.php?id=' . $thread['id'] . '&page=' . $current_page;
+                                $action = ($comment['is_liked'] > 0) ? 'unlike' : 'like';
+                                $like_url = $base_url . '&action=' . $action . '&comment_id=' . $comment['id'];
+
+                                // ログイン状態といいね状態に応じた表示設定
+                                $is_liked = ($comment['is_liked'] > 0);
+                
+                                // 1: ハートマークとスタイルを定義
+                                $heart_filled = '&#x2665;';    // 塗りつぶされたハート (♥)
+                                $heart_outline = '&#x2661;';   // 枠線のみのハート (♡)
+                
+                                $heart_mark = $is_liked ? $heart_filled : $heart_outline;
+                                $heart_color = $is_liked ? '#dc3545' : '#6c757d'; // 赤 or 灰色
+                            ?>
+
+                            <?php if ($is_logged_in): ?>
+                                <a href="<?= htmlspecialchars($like_url) ?>" 
+                                   style="text-decoration: none; font-size: 1.5em; color: <?= $heart_color ?>;">
+                                    <?= $heart_mark ?>
+                                </a>
+                            <?php else: ?>
+                                <a href="member_regist.php" 
+                                   style="text-decoration: none; font-size: 1.5em; color: #6c757d; cursor: pointer;"
+                                   title="いいねするにはログインが必要です">
+                                    <?= $heart_outline ?>
+                                </a>
+                            <?php endif; ?>
+          
+                            <span style="margin-left: 10px; font-size: 0.9em; color: #666;">
+                                <?= htmlspecialchars($comment['like_count'] ?? 0) ?>
+                            </span>
+                        </div>
                     </div>
                 <?php endforeach; ?>
 
