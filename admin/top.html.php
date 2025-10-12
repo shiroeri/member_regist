@@ -19,6 +19,11 @@
                     <a href="logout.php" class="btn-secondary">ログアウト</a>
                 </div>
         </div>
+        <div>
+            <div style="display: flex; align-items: center;">
+                <a href="member.php" class="btn-secondary">会員一覧</a>
+            </div>
+        </div>
     </div>
 </body>
 </html>
