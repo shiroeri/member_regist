@@ -183,6 +183,7 @@
                         </a>
                     </th>
                     <th>編集</th>
+                    <th>詳細</th>
                 </tr>
             </thead>
             <tbody>
@@ -192,7 +193,7 @@
                     <?php foreach ($members as $member): ?>
                         <tr>
                             <td><?= htmlspecialchars($member['id']) ?></td>
-                            <td><?= htmlspecialchars($member['name_sei'] . ' ' . $member['name_mei']) ?></td>
+                            <td><a href="member_detail.php?id=<?= htmlspecialchars($member['id']) ?>"><?= htmlspecialchars($member['name_sei'] . ' ' . $member['name_mei']) ?></a></td>
                             <td>
                                 <?php 
                                     if ($member['gender'] === '1' || $member['gender'] === 1) {
@@ -206,7 +207,8 @@
                             </td>
                             <td><?= htmlspecialchars($member['pref_name'] ?? '') . htmlspecialchars($member['address'] ?? '') ?></td>
                             <td><?= htmlspecialchars($member['created_at']) ?></td>
-                            <td><a href="member_edit.php?id=<?= htmlspecialchars($member['id']) ?>">編集</a>
+                            <td><a href="member_edit.php?id=<?= htmlspecialchars($member['id']) ?>">編集</a></td>
+                            <td><a href="member_detail.php?id=<?= htmlspecialchars($member['id']) ?>">詳細</a></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
