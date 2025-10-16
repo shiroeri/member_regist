@@ -93,7 +93,8 @@
             <h1>会員一覧</h1>
             <a href="top.php" class="btn btn-secondary">トップへ戻る</a> 
         </div>
-        
+        <a href="member_regist.php" class="btn btn-secondary" >会員登録</a>
+        <br><br>
         <form action="member.php" method="GET" class="search-form">
             
             <div class="search-group">
@@ -181,6 +182,7 @@
                             <span class="sort-indicator-box"><?= getSortIndicator('created_at', $sort_column, $sort_order) ?></span>
                         </a>
                     </th>
+                    <th>編集</th>
                 </tr>
             </thead>
             <tbody>
@@ -204,7 +206,8 @@
                             </td>
                             <td><?= htmlspecialchars($member['pref_name'] ?? '') . htmlspecialchars($member['address'] ?? '') ?></td>
                             <td><?= htmlspecialchars($member['created_at']) ?></td>
-                            </tr>
+                            <td><a href="member_edit.php?id=<?= htmlspecialchars($member['id']) ?>">編集</a>
+                        </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
