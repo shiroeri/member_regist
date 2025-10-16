@@ -3,18 +3,25 @@
 // PHPセッションを開始
 session_start();
 
+
+
 // データベース設定と接続関数を読み込み
-require_once 'db_config.php';
+require_once '../db_config.php'; 
+
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: login.php'); 
+    exit;
+}
 
 // フォームのリロード時や初めてのアクセス時の初期データ設定を行う前に、
 // GETアクセス時（POSTではない初回アクセス時）に、編集や他のフォームのセッションデータをクリアする。
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // ステージとエラー情報をクリア
     unset($_SESSION['stage']);
-    unset($_SESSION['errors']);
+    unset($_SESSION['regist_errors']);
     
     // 💡 編集画面などから残っているフォームデータをクリアする
-    unset($_SESSION['form_data']); 
+    unset($_SESSION['regist_data']); 
 }
 
 // ----------------------------------------------------
@@ -33,7 +40,6 @@ const PREFECTURES = [
 ];
 
 // 性別の選択肢 (テーブルのgender: INTに合わせて数値を定義)
-// ※ HTMLフォーム側もこの数値に合わせて修正が必要です
 const GENDERS = [
     1 => '男性',
     2 => '女性',
@@ -42,10 +48,10 @@ const GENDERS = [
 // ステージ管理
 // 1: フォーム入力 (form), 2: 確認画面 (confirm), 3: 完了画面 (complete)
 $stage = $_SESSION['stage'] ?? 1;
-$errors = $_SESSION['errors'] ?? [];
+$errors = $_SESSION['regist_errors'] ?? [];
 
 // エラー情報をクリア（フォーム画面表示前にクリアしておく）
-unset($_SESSION['errors']);
+unset($_SESSION['regist_errors']);
 
 // --- 二重送信防止トークンの管理 ---
 if (!isset($_SESSION['token'])) {
@@ -63,12 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $post_token = $_POST['token'] ?? ''; // 送信されたトークンを取得
 
-    // ★ 修正点: フォームデータのキーをテーブルの列名に合わせて変更
     $current_post_data = [
-        'name_sei'          => trim($_POST['name_sei'] ?? ''), // last_name -> name_sei
-        'name_mei'          => trim($_POST['name_mei'] ?? ''), // first_name -> name_mei
-        'gender'            => $_POST['gender'] ?? '', // genderはINT型でPOSTされる前提
-        'pref_name'         => $_POST['pref_name'] ?? '', // prefecture -> pref_name
+        'name_sei'          => trim($_POST['name_sei'] ?? ''),
+        'name_mei'          => trim($_POST['name_mei'] ?? ''),
+        'gender'            => $_POST['gender'] ?? '',
+        'pref_name'         => $_POST['pref_name'] ?? '',
         'address'           => trim($_POST['address'] ?? ''),
         'password'          => $_POST['password'] ?? '',
         'password_confirm'  => $_POST['password_confirm'] ?? '',
@@ -78,12 +83,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // フォームから確認画面へ (stage 1 -> 2)
     if ($action === 'confirm') {
 
-        // トークンは確認画面へ遷移する際はチェックしない（フォーム表示時にセットされる）
-
         // 1. バリデーションの実行
-        // データベース接続を取得してバリデーション関数に渡す
         $pdo = getPdoConnection();
-        $errors = validateForm($current_post_data, $pdo); // 修正された関数を呼び出す
+        $errors = validateForm($current_post_data, $pdo);
 
         // 2. 画面遷移の決定
         if (empty($errors)) {
@@ -94,82 +96,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // エラーがあればフォームに留まる
             $stage = 1;
-            // エラーメッセージをセッションに保存（フォーム画面での表示用）
-            $_SESSION['errors'] = $errors;
-            // エラー時はトークンを再生成しない（フォームの再表示で同じトークンを使う）
+            $_SESSION['regist_errors'] = $errors;
         }
 
         // フォームデータは、エラーがあってもセッションに保存する
-        // パスワードはセキュリティのためセッションに保存しない
-        $_SESSION['form_data'] = array_diff_key(
+        $_SESSION['regist_data'] = array_diff_key(
             $current_post_data, 
             array_flip(['password', 'password_confirm'])
         );
         
-        // パスワードはセッション保存せずに、エラー時はフォーム入力値を空にするため、
-        // エラーがない場合のみ、一時的にセッションにパスワードハッシュを保存
+        // エラーがない場合のみ、パスワードハッシュをセッションに保存
         if ($stage === 2) {
-             // パスワードハッシュをセッションに保存（本番では非推奨）
-             $_SESSION['form_data']['password_hash'] = password_hash($current_post_data['password'], PASSWORD_DEFAULT);
+             // パスワードハッシュをセッションに保存
+             $_SESSION['regist_data']['password_hash'] = password_hash($current_post_data['password'], PASSWORD_DEFAULT);
         }
 
 
     // 確認画面から登録完了へ (stage 2 -> 3)
     } elseif ($action === 'register') {
         
-    // ... (トークンチェックなどの処理は省略) ...
+        // トークンチェック (セキュリティ強化のため追加)
+        if (!isset($_SESSION['token']) || $post_token !== $_SESSION['token']) {
+            $_SESSION['regist_errors']['global'] = '不正な操作または二重送信の可能性があります。最初からやり直してください。';
+            $_SESSION['stage'] = 1; // フォーム入力画面に戻す
+            header('Location: member_regist.php');
+            exit;
+        }
 
-      // 2. データベース登録処理
-      try {
-        $pdo = getPdoConnection();
-        
-        // トランザクション開始
-        $pdo->beginTransaction();
+        // 2. データベース登録処理
+        try {
+            $pdo = getPdoConnection();
+            
+            // エラー時に例外をスローするように設定 (堅牢性のため維持)
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
+            
+            // トランザクション開始
+            $pdo->beginTransaction();
 
-        $formData = $_SESSION['form_data']; // セッションのデータを使用
-        $password_hash = $formData['password_hash']; // 確認画面へ遷移時に保存したハッシュ
+            $formData = $_SESSION['regist_data']; // セッションのデータを使用
+            $password_hash = $formData['password_hash']; // 確認画面へ遷移時に保存したハッシュ
 
-        // ★ 修正点: INSERT文に created_at と updated_at を追加し、NOW() 関数で現在時刻を挿入
-        //    UPDATED_ATにはON UPDATE CURRENT_TIMESTAMPを入れない場合、
-        //    この登録時だけ現在時刻が入ります。更新時は別途UPDATEが必要です。
-        $sql = "INSERT INTO members (name_sei, name_mei, gender, pref_name, address, password, email, created_at, updated_at) 
-                VALUES (:name_sei, :name_mei, :gender, :pref_name, :address, :password, :email, NOW(), NOW())";
-        
-        $stmt = $pdo->prepare($sql);
-        
-        $stmt->bindValue(':name_sei', $formData['name_sei']);
-        $stmt->bindValue(':name_mei', $formData['name_mei']);
-        $stmt->bindValue(':gender', (int)$formData['gender'], PDO::PARAM_INT);
-        $stmt->bindValue(':pref_name', $formData['pref_name']);
-        $stmt->bindValue(':address', $formData['address']);
-        $stmt->bindValue(':password', $password_hash);
-        $stmt->bindValue(':email', $formData['email']);
-        // NOW() はSQL関数なので、bindValueは不要
+            // SQL文のパスワードカラム名は 'password'、プレースホルダーは ':password' で確定
+            $sql = "INSERT INTO members (name_sei, name_mei, gender, pref_name, address, password, email, created_at, updated_at) 
+                    VALUES (:name_sei, :name_mei, :gender, :pref_name, :address, :password, :email, NOW(), NOW())";
+            
+            $stmt = $pdo->prepare($sql);
+            
+            $stmt->bindValue(':name_sei', $formData['name_sei']);
+            $stmt->bindValue(':name_mei', $formData['name_mei']);
+            $stmt->bindValue(':gender', (int)$formData['gender'], PDO::PARAM_INT);
+            $stmt->bindValue(':pref_name', $formData['pref_name']);
+            $stmt->bindValue(':address', $formData['address']);
+            
+            // 値はハッシュ化された $password_hash を使用
+            $stmt->bindValue(':password', $password_hash);
+            
+            $stmt->bindValue(':email', $formData['email']);
 
-        $stmt->execute();
+            // 実行
+            $stmt->execute(); 
 
             // トランザクションコミット
             $pdo->commit();
 
-            $stage = 3;
-            $_SESSION['stage'] = 3;
+            // 💡 修正: 完了画面(stage 3)への遷移を削除
             
             // 3. 登録完了後、セッションデータをクリア（トークンもクリア）
-            unset($_SESSION['form_data']);
-            unset($_SESSION['errors']);
-            unset($_SESSION['token']); // トークンをクリアして再利用を防ぐ
+            unset($_SESSION['regist_data']);
+            unset($_SESSION['regist_errors']);
+            unset($_SESSION['token']);
+            unset($_SESSION['stage']); // stageもクリア
+
+            // 💡 修正: member.phpへリダイレクト
+            header('Location: member.php');
+            exit;
 
         } catch (PDOException $e) {
             // エラーが発生した場合、ロールバック
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            error_log("DB Registration failed: " . $e->getMessage());
-            // エラー画面にリダイレクトするか、エラーメッセージを表示
-            $stage = 2; // 確認画面に留まる
-            $_SESSION['errors']['global'] = '登録処理中にエラーが発生しました。再度お試しください。';
+            // ログ出力
+            error_log("DB Registration failed: " . $e->getMessage()); 
+            
+            // ユーザーフレンドリーなエラー処理
+            $stage = 2; 
+            $_SESSION['regist_errors']['global'] = '登録処理中にデータベースエラーが発生しました。時間を置いて再度お試しください。';
             $_SESSION['stage'] = $stage;
-            // 処理を中断し、確認画面にリダイレクト
             header('Location: member_regist.php');
             exit;
         }
@@ -177,23 +190,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 確認画面からフォームへ戻る (stage 2 -> 1)
     } elseif ($action === 'back') {
         $stage = 1;
-        // 戻る際も新しいトークンを生成（フォーム再表示時に新しいトークンを使う）
+        // 戻る際も新しいトークンを生成
         $_SESSION['token'] = bin2hex(random_bytes(32));
     }
 }
 
 // フォームのリロード時や初めてのアクセス時の初期データ設定
-if (!isset($_SESSION['form_data'])) {
-    // ★ 修正点: セッションデータのキーをテーブルの列名に合わせて変更
-    $_SESSION['form_data'] = [
+if (!isset($_SESSION['regist_data'])) {
+    $_SESSION['regist_data'] = [
         'name_sei' => '', 'name_mei' => '', 'gender' => '', 
         'pref_name' => '', 'address' => '', 'password_hash' => '', 
         'email' => ''
     ];
 }
 
-$formData = $_SESSION['form_data'];
-$token = $_SESSION['token']; // 再設定されたトークンを取得
+$formData = $_SESSION['regist_data'];
+$token = $_SESSION['token'];
 
 // 現在のステージをセッションに保存
 $_SESSION['stage'] = $stage;
@@ -212,7 +224,6 @@ function validateForm(array $data, \PDO $pdo): array {
     $errors = [];
 
     // --- 氏名（姓）: 必須, 20文字以内 ---
-    // ★ 修正点: last_name -> name_sei
     if (empty($data['name_sei'])) {
         $errors['name_sei'] = '氏名（姓）は必須入力です。';
     } elseif (mb_strlen($data['name_sei']) > 20) {
@@ -220,7 +231,6 @@ function validateForm(array $data, \PDO $pdo): array {
     }
 
     // --- 氏名（名）: 必須, 20文字以内 ---
-    // ★ 修正点: first_name -> name_mei
     if (empty($data['name_mei'])) {
         $errors['name_mei'] = '氏名（名）は必須入力です。';
     } elseif (mb_strlen($data['name_mei']) > 20) {
@@ -228,25 +238,20 @@ function validateForm(array $data, \PDO $pdo): array {
     }
 
     // --- 性別: 必須, テーブルのINT型に合う値かチェック ---
-    // ★ 修正点: バリデーションをINT型（1, 2）でチェックするように変更
     $valid_gender_keys = array_keys(GENDERS);
     $gender = $data['gender'];
-
-    // emptyは'0'や空文字をtrueとするため、is_numericとin_arrayでチェック
     if (!is_numeric($gender) || !in_array((int)$gender, $valid_gender_keys, true)) {
-        $errors['gender'] = '性別は必須選択です。または不正な値が選択されました。'; // チェック項目に対応
+        $errors['gender'] = '性別は必須選択です。';
     }
 
     // --- 住所（都道府県）: 必須, 47都道府県以外の値は不正 ---
-    // ★ 修正点: prefecture -> pref_name
     if (empty($data['pref_name'])) {
         $errors['pref_name'] = '都道府県は必須選択です。';
     } elseif (!in_array($data['pref_name'], PREFECTURES, true)) {
-        $errors['pref_name'] = '不正な都道府県が選択されました。'; // チェック項目に対応
+        $errors['pref_name'] = '不正な都道府県が選択されました。';
     }
 
     // --- 住所（それ以降の住所）: 任意, 100文字以内 ---
-    // テーブルのVARCHAR(255)に対して、ここでは100文字に制限
     if (mb_strlen($data['address']) > 100) {
         $errors['address'] = '住所（それ以降）は100文字以内で入力してください。';
     }
@@ -255,7 +260,7 @@ function validateForm(array $data, \PDO $pdo): array {
     $password = $data['password'];
     if (empty($password)) {
         $errors['password'] = 'パスワードは必須入力です。';
-    } elseif (strlen($password) < 8 || strlen($password) > 20) { // 半角英数字なのでstrlen
+    } elseif (mb_strlen($password) < 8 || mb_strlen($password) > 20) {
         $errors['password'] = 'パスワードは8文字以上20文字以内で入力してください。';
     } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $password)) {
         $errors['password'] = 'パスワードは半角英数字で入力してください。';
@@ -268,8 +273,8 @@ function validateForm(array $data, \PDO $pdo): array {
     } elseif ($password !== $password_confirm) {
         $errors['password_confirm'] = 'パスワードと確認用パスワードが一致しません。';
     } 
-    // パスワード確認も文字数・形式をチェック（パスワード本体のエラーに依存させないため）
-    elseif (strlen($password_confirm) < 8 || strlen($password_confirm) > 20) {
+    // パスワード確認も文字数・形式をチェック（本体のチェックと合わせる）
+    elseif (mb_strlen($password_confirm) < 8 || mb_strlen($password_confirm) > 20) {
         $errors['password_confirm'] = '確認用パスワードは8文字以上20文字以内で入力してください。';
     } elseif (!preg_match('/^[a-zA-Z0-9]+$/', $password_confirm)) {
         $errors['password_confirm'] = '確認用パスワードは半角英数字で入力してください。';
@@ -293,7 +298,6 @@ function validateForm(array $data, \PDO $pdo): array {
                 $errors['email'] = 'このメールアドレスは既に登録されています。';
             }
         } catch (PDOException $e) {
-            // DBエラーが発生した場合
             error_log("Email check failed: " . $e->getMessage());
             $errors['email'] = 'メールアドレスの重複チェック中にエラーが発生しました。';
         }
@@ -308,18 +312,18 @@ function validateForm(array $data, \PDO $pdo): array {
 
 // 現在のステージに応じてタイトルを設定
 if ($stage === 1) {
-    $title = '会員情報登録フォーム';
+    $title = '会員登録';
 } elseif ($stage === 2) {
-    $title = '会員情報確認画面';
+    $title = '会員登録';
 } else {
-    $title = '会員登録完了';
+    // 完了画面がないため、通常はここには来ない
+    $title = 'エラー'; 
 }
 
 // テンプレートファイルを読み込み、HTMLを出力
 require_once 'member_regist.html.php';
 
-// 完了画面から戻る際はセッションステージをリセット（フォームからやり直す）
-if ($stage === 3) {
-    unset($_SESSION['stage']);
-}
-?>
+// stage 3 に来ることはないが、念のため残す（ただし上記でリダイレクトされるため実行されない）
+// if ($stage === 3) {
+//     unset($_SESSION['stage']);
+// }
